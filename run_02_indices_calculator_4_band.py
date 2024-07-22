@@ -16,7 +16,7 @@ Run raw files with run_merge_tiles.py before
 """
 
 import glob, os, shutil
-from functions_planet import *
+from functions_planet import do_index_calculation_4band, get_image_dimensions
 
 
 # input_pattern = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/4_band/Data_March-June_23_Feb-March_24_psscene_analytic_sr_udm2/PSScene/*AnalyticMS_SR_clip.tif'  
@@ -26,6 +26,7 @@ rgb_dir = os.path.join(output_dir, 'RGB')
 ndvi_dir = os.path.join(output_dir, 'NDVI')
 bst_dir = os.path.join(output_dir, 'BST')
 gst_dir = os.path.join(output_dir, 'GST')
+SI_Index_dir = os.path.join(output_dir, 'SI_Index')
 
 
 # List for the desired index calculations:
@@ -33,10 +34,10 @@ gst_dir = os.path.join(output_dir, 'GST')
     # NDVI
     # BST - blue snow threshold
     # GST - green snow threshold
-outputs = ["NDVI", "BST", "GST"]
+outputs = ["NDVI", "BST", "GST", 'SI_Index']
 
 # List for the desired output folders
-out_dirs = [ndvi_dir, bst_dir, gst_dir]
+out_dirs = [ndvi_dir, bst_dir, gst_dir, SI_Index_dir]
 
 
 # # Water masking threshold

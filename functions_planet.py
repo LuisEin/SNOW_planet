@@ -12,6 +12,7 @@ from osgeo import gdal, ogr
 from scipy.ndimage import gaussian_filter1d
 from scipy.stats import gaussian_kde
 from datetime import datetime
+from skimage.morphology import reconstruction
 import numpy as np
 import matplotlib.pyplot as plt
 import glob, os, shutil
@@ -44,7 +45,6 @@ def get_image_dimensions(file_path):
 #%% end of function
 
 def do_index_calculation_4band(file, width, output_name, output_dir):
-    #%%
     '''
     This function needs 4Band surface reflectance data as input
     '''
@@ -59,9 +59,6 @@ def do_index_calculation_4band(file, width, output_name, output_dir):
     red_band = dataset.GetRasterBand(3).ReadAsArray().astype(float)
     nir_band = dataset.GetRasterBand(4).ReadAsArray().astype(float)
     
-    # # Apply water masking
-    # water_mask = mask_water(nir_band, green_band, water_threshold)
-
     # Calculate indices based on output_name
     if output_name == "NDVI":
         index = (nir_band - red_band) / (nir_band + red_band)
@@ -69,15 +66,17 @@ def do_index_calculation_4band(file, width, output_name, output_dir):
         index = (nir_band - blue_band) / (nir_band + blue_band)
     elif output_name == "GST":
         index = (nir_band - green_band) / (nir_band + green_band)
+    elif output_name == "SI_Index":
+        mean_red = np.mean(red_band)
+        mean_nir = np.mean(nir_band)
+        index = np.sqrt((red_band / mean_red) * (nir_band / mean_nir))
     else:
         raise ValueError("Unknown index: {}".format(output_name))
 
-    # Avoid division by zero
-    index = np.where((nir_band + red_band) == 0, np.nan, index)
+    # Avoid division by zero for standard indices
+    if output_name in ["NDVI", "BST", "GST"]:
+        index = np.where((nir_band + red_band) == 0, np.nan, index)
     
-    # # Apply water mask
-    # index[water_mask] = np.nan
-
     # Get georeference info
     geo_transform = dataset.GetGeoTransform()
     projection = dataset.GetProjection()
@@ -128,7 +127,7 @@ def do_index_calculation_8band(file, width, output_name, output_dir):
     red_band = dataset.GetRasterBand(6).ReadAsArray().astype(float)
     red_edge_band = dataset.GetRasterBand(7).ReadAsArray().astype(float)
     nir_band = dataset.GetRasterBand(8).ReadAsArray().astype(float)
-    
+
     # Calculate indices based on output_name
     if output_name == "NDVI":
         denominator = (nir_band + red_band)
@@ -142,6 +141,10 @@ def do_index_calculation_8band(file, width, output_name, output_dir):
     elif output_name == "GST":
         denominator = (nir_band + green_band)
         index = (nir_band - green_band) / denominator
+    elif output_name == "SI_Index":
+        mean_red = np.mean(red_band)
+        mean_nir = np.mean(nir_band)
+        index = np.sqrt((red_band / mean_red) * (nir_band / mean_nir))
     else:
         raise ValueError("Unknown index: {}".format(output_name))
 
@@ -177,6 +180,7 @@ def do_index_calculation_8band(file, width, output_name, output_dir):
     del out_dataset
 
     print(f"{output_name} calculation and export completed for {file}. Output saved as {out_file}")
+
 #%% endend of function
 
 def mask_water(nir_band, green_band, threshold):
@@ -204,7 +208,7 @@ def mask_water(nir_band, green_band, threshold):
 
 
 
-#### from former run_treshold_analysis_temp #################################################
+#### from run_04_treshold_analysis_temp #################################################
 
 def apply_gaussian_filter_and_generate_histogram(tiff_file, output_histogram_dir):
     #%%
@@ -264,4 +268,79 @@ def process_histograms(input_dir, output_histogram_dir):
                 tiff_file = os.path.join(root, file)
                 apply_gaussian_filter_and_generate_histogram(tiff_file, output_histogram_dir)
     
+#%% end of function
+
+def fillhole(image):
+    #%%
+    """
+    Apply the morphological fill-hole (flood-fill) transformation.
+    With the scikit function from here: 
+    https://scikit-image.org/docs/stable/auto_examples/features_detection/plot_holes_and_peaks.html
+    """
+    # Create the marker image
+    marker = np.copy(image)
+    marker[1:-1, 1:-1] = image.max()
+    
+    # Perform morphological reconstruction using skimage
+    filled = reconstruction(marker, image, method='erosion')
+    
+    return filled
+#%% end of function
+
+def process_si_index(file_path, output_dir, threshold=0.1):
+    #%%
+    """
+    Process a single SI index file to extract cloud shadows and save the result.
+    Reads an SI index file using GDAL.
+    Applies the fill-hole transformation to the SI index.
+    Computes the difference image and creates a binary shadow mask based on the threshold.
+    Extracts the date part from the file name to use in the output file name.
+    Saves the resulting shadow mask as a new .tif file using GDAL.
+    """
+    # Read the SI index file using GDAL
+    src_ds = gdal.Open(file_path)
+    si_index = src_ds.GetRasterBand(1).ReadAsArray()
+    
+    # Apply the fillhole transformation to SI
+    filled_SI = fillhole(si_index)
+    
+    # Calculate the difference image
+    difference_image = filled_SI - si_index
+    
+    # Create the potential shadow mask (pSM) using the threshold
+    pSM = (difference_image >= threshold).astype(np.uint8)  # Convert to binary mask (0, 1)
+    
+    # Extract date from the file name (assuming it is the first part of the name)
+    base_name = os.path.basename(file_path)
+    date_part = base_name.split('_')[0]
+    
+    # Define the output file path
+    output_file = os.path.join(output_dir, f"{date_part}_potential_shadow_mask.tif")
+    
+    # Save the resulting shadow mask using GDAL
+    driver = gdal.GetDriverByName('GTiff')
+    dst_ds = driver.Create(output_file, src_ds.RasterXSize, src_ds.RasterYSize, 1, gdal.GDT_Byte)
+    dst_ds.SetGeoTransform(src_ds.GetGeoTransform())
+    dst_ds.SetProjection(src_ds.GetProjection())
+    dst_ds.GetRasterBand(1).WriteArray(pSM)
+    dst_ds.FlushCache()
+    dst_ds = None
+    src_ds = None
+#%% end of function
+
+def process_SIindex_directory(input_dir, output_dir, threshold=0.1):
+    #%%
+    """
+    Process all SI index files in the directory. and calculate a potential
+    shadow mask based on the Shadow Index and the morphological fill-hole 
+    (flood-fill) transformation.
+    From Wang et al., 2021
+    """
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    
+    for file_name in os.listdir(input_dir):
+        if file_name.endswith(".tif"):
+            file_path = os.path.join(input_dir, file_name)
+            process_si_index(file_path, output_dir, threshold)
 #%% end of function

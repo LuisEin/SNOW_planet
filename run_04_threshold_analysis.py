@@ -10,7 +10,7 @@ Then does Histograms and threshold calculations.
 '''
 
 
-from functions_planet import *
+from functions_planet import process_histograms, process_SIindex_directory
 
 if __name__ == "__main__":
     # Define the input directory containing the cropped TIFF files
@@ -21,3 +21,28 @@ if __name__ == "__main__":
 
     # Process the histograms
     process_histograms(input_dir, output_histogram_dir)
+    
+    
+### Calculate Shadow-Index (SI) ###############################################
+'''
+This process has been integrated into the indices calculations (run_02 and run_03)
+'''
+
+### Potential Shadow Mask from Wang et al. 2021 ###############################
+'''
+This function Implements the morphological fill-hole transformation.
+Reads an SI index file using GDAL.
+Applies the fill-hole transformation to the SI index.
+Computes the difference image and creates a binary shadow mask based on the threshold.
+Extracts the date part from the file name to use in the output file name.
+Saves the resulting shadow mask as a new .tif file using GDAL.
+'''
+if __name__ == "__main__":
+    # Define the input directory containing the SI index files
+    input_directory = "/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/code/temp/SI_Index"
+    
+    # Define the output directory where shadow masks will be saved
+    output_dir = "/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/code/temp"
+
+    # Process the SI index files to extract cloud shadows
+    process_SIindex_directory(input_dir, output_dir, threshold=0.1)
