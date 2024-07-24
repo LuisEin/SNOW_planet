@@ -20,7 +20,7 @@ from functions_planet import do_index_calculation_4band, get_image_dimensions
 
 
 # input_pattern = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/4_band/Data_March-June_23_Feb-March_24_psscene_analytic_sr_udm2/PSScene/*AnalyticMS_SR_clip.tif'  
-input_pattern = "/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/files_merged/8Band_2024_04_16__psscene_analytic_8b_sr_udm2/*_merged_masked.tif"
+input_pattern = "/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/files_merged/4Band_Data_March-June_23_Feb-March_24_psscene_analytic_sr_udm2/*_merged_masked.tif"
 output_dir = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/code/temp/'
 rgb_dir = os.path.join(output_dir, 'RGB')
 ndvi_dir = os.path.join(output_dir, 'NDVI')

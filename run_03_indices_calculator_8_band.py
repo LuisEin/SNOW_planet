@@ -17,9 +17,8 @@ Run raw files with run_merge_tiles.py before
 from functions_planet import *
 import glob, os, shutil
 
-
 # Define file paths and date pattern
-input_pattern = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/files_merged/8Band_2024_04_16__psscene_analytic_8b_sr_udm2/*merged.tif'  
+input_pattern = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/files_ready/8_band/2024_04_16__psscene_analytic_8b_sr_udm2/*.tif'  
 # Adjust the pattern to match your tiles
 output_dir = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/code/temp/'
 rgb_dir = os.path.join(output_dir, 'RGB')
@@ -27,16 +26,18 @@ ndvi_dir = os.path.join(output_dir, 'NDVI')
 bst_dir = os.path.join(output_dir, 'BST')
 cbst_dir = os.path.join(output_dir, 'CBST')
 gst_dir = os.path.join(output_dir, 'GST')
+SI_Index_dir = os.path.join(output_dir, 'SI_Index')
 
 # List for the desired index calculations:
 # NDVI
 # BST - blue snow threshold
 # CBST - coastal blue snow threshold
 # GST - green snow threshold
-outputs = ["NDVI", "BST", "CBST", "GST"]
+# SI_Index - snow index
+outputs = ["NDVI", "BST", "CBST", "GST", "SI_Index"]
 
 # List for the desired output folders
-out_dirs = [ndvi_dir, bst_dir, cbst_dir, gst_dir]
+out_dirs = [ndvi_dir, bst_dir, cbst_dir, gst_dir, SI_Index_dir]
 
 # Create the output directories if they don't exist
 os.makedirs(rgb_dir, exist_ok=True)

@@ -15,17 +15,53 @@ from datetime import datetime
 from skimage.morphology import reconstruction
 import numpy as np
 import matplotlib.pyplot as plt
-import glob, os, shutil
+import glob, os, shutil, re
 
-#### from former run_merge_tiles ###############################################
+#### for run_01_merge_tiles ###############################################
 
 
+# Read AOI from shapefile
 def read_shapefile(shapefile_path):
     #%%
     shapefile = ogr.Open(shapefile_path)
+    if shapefile is None:
+        raise ValueError(f"Could not open shapefile: {shapefile_path}")
+    
     layer = shapefile.GetLayer()
-    geom = layer.GetFeature(0).GetGeometryRef()
-    return geom
+    if layer is None:
+        raise ValueError(f"Could not get layer from shapefile: {shapefile_path}")
+    
+    feature = layer.GetFeature(0)
+    if feature is None:
+        raise ValueError(f"Could not get feature from layer: {shapefile_path}")
+    
+    geom = feature.GetGeometryRef()
+    if geom is None:
+        raise ValueError(f"Could not get geometry from feature: {shapefile_path}")
+    
+    return geom.Clone()
+#%%
+
+# Extract time from filename
+def extract_time_from_filename(filename):
+    #%%
+    match = re.search(r'_(\d{6})_', filename)
+    if match:
+        return match.group(1)
+    return ''
+#%%
+
+# Check if image covers the AOI
+def check_coverage(image_path, aoi_geom):
+    ds = gdal.Open(image_path)
+    gt = ds.GetGeoTransform()
+    minx = gt[0]
+    maxy = gt[3]
+    maxx = minx + gt[1] * ds.RasterXSize
+    miny = maxy + gt[5] * ds.RasterYSize
+    ds_geom = ogr.CreateGeometryFromWkt(f"POLYGON (({minx} {miny}, {minx} {maxy}, {maxx} {maxy}, {maxx} {miny}, {minx} {miny}))")
+    print(f"Image Geometry: {ds_geom.ExportToWkt()}")
+    return aoi_geom.Within(ds_geom)
 #%% end of function
 
 
@@ -128,6 +164,9 @@ def do_index_calculation_8band(file, width, output_name, output_dir):
     red_edge_band = dataset.GetRasterBand(7).ReadAsArray().astype(float)
     nir_band = dataset.GetRasterBand(8).ReadAsArray().astype(float)
 
+    # Initialize the denominator to avoid unbound local error
+    denominator = None
+    
     # Calculate indices based on output_name
     if output_name == "NDVI":
         denominator = (nir_band + red_band)
@@ -149,7 +188,8 @@ def do_index_calculation_8band(file, width, output_name, output_dir):
         raise ValueError("Unknown index: {}".format(output_name))
 
     # Avoid division by zero
-    index = np.where(denominator == 0, np.nan, index)
+    if denominator is not None:
+        index = np.where(denominator == 0, np.nan, index)
 
     # Get georeference info
     geo_transform = dataset.GetGeoTransform()
@@ -181,6 +221,7 @@ def do_index_calculation_8band(file, width, output_name, output_dir):
 
     print(f"{output_name} calculation and export completed for {file}. Output saved as {out_file}")
 
+
 #%% endend of function
 
 def mask_water(nir_band, green_band, threshold):
@@ -210,7 +251,7 @@ def mask_water(nir_band, green_band, threshold):
 
 #### from run_04_treshold_analysis_temp #################################################
 
-def apply_gaussian_filter_and_generate_histogram(tiff_file, output_histogram_dir):
+def apply_gaussian_filter_and_generate_histogram(tiff_file,index_type, output_histogram_dir):
     #%%
     '''
     This function opens multiple planetScope Index calculated .tif files,
@@ -240,15 +281,10 @@ def apply_gaussian_filter_and_generate_histogram(tiff_file, output_histogram_dir
     plt.hist(gau_array.flatten(), bins=50)
     plt.xlabel('Value')
     plt.ylabel('Frequency')
-    plt.title(f'Histogram of BST from {date}')
-    
-    # Create the output directory if it doesn't exist
-    date_dir = os.path.join(output_histogram_dir, date)
-    if not os.path.exists(date_dir):
-        os.makedirs(date_dir)
+    plt.title(f'Histogram of {index_type} from {date}')
     
     # Construct the output file path
-    output_file = os.path.join(date_dir, f'{date}_BST_hist.png')
+    output_file = os.path.join(output_histogram_dir, f'{date}_{index_type}_hist.png')
     
     # Save the histogram
     plt.savefig(output_file)
@@ -257,16 +293,17 @@ def apply_gaussian_filter_and_generate_histogram(tiff_file, output_histogram_dir
 
     # Close the dataset
     dataset = None
-#%% end of fuction
+#%% end of function
 
-def process_histograms(input_dir, output_histogram_dir):
+def process_histograms(input_dir, index_type, output_histogram_dir):
     #%%
     # This is the wrapper function from apply_gaussian_filter_and_generate_histogram
     for root, _, files in os.walk(input_dir):
         for file in files:
             if file.endswith('.tif'):
                 tiff_file = os.path.join(root, file)
-                apply_gaussian_filter_and_generate_histogram(tiff_file, output_histogram_dir)
+                apply_gaussian_filter_and_generate_histogram(tiff_file, index_type, output_histogram_dir)
+
     
 #%% end of function
 
@@ -279,6 +316,7 @@ def fillhole(image):
     """
     # Create the marker image
     marker = np.copy(image)
+    # Select all rows and columns except the first and the last ones
     marker[1:-1, 1:-1] = image.max()
     
     # Perform morphological reconstruction using skimage
