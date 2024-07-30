@@ -24,10 +24,13 @@ def plot_histogram(data, bins=50, date_str=""):
     plt.title(f'Histogram of Coastal Blue Index - {date_str}')
     plt.show()
 
-def identify_peaks_and_valleys(data, bins=50, threshold=0.1):
+def identify_peaks_and_valleys(data, bins=50, height_threshold=0.05, prominence_threshold=0.01, width_threshold=1):
     histogram, bin_edges = np.histogram(data, bins=bins)
-    peaks, _ = find_peaks(histogram, height=threshold * np.max(histogram))
-    valleys, _ = find_peaks(-histogram)  # Invert histogram to find valleys
+    
+    # Adjust the peak detection to be more sensitive
+    peaks, _ = find_peaks(histogram, height=height_threshold * np.max(histogram), prominence=prominence_threshold, width=width_threshold)
+    valleys, _ = find_peaks(-histogram, prominence=prominence_threshold, width=width_threshold)  # Invert histogram to find valleys
+    
     return peaks, valleys, bin_edges
 
 def split_shadow_area(data, peaks, valleys, bin_edges):
