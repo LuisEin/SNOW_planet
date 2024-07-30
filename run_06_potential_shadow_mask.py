@@ -30,7 +30,7 @@ The Result is a file that presents a potential shadow mask
 '''
 if __name__ == "__main__":
     # Define the input directory containing the SI index files
-    input_directory = "/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Indices/indices_8Band_2024_04_16__psscene_analytic_8b_sr_udm2/SI_Index"
+    input_directory = "/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Indices/indices_8Band_matching_LIDAR_or_SWS_20240229_20230807_20230302_TOAR_psscene_analytic_8b_udm2/SI_Index"
     
     # Define the output directory where shadow masks will be saved
     output_dir = "/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/code/temp"

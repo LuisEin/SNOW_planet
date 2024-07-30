@@ -14,14 +14,16 @@ from functions_planet import process_histograms
 
 if __name__ == "__main__":
     # Define the input directory containing the cropped TIFF files
-    input_dir = "/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Indices/indices_8Band_2024_04_26__psscene_analytic_8b_sr_udm2/CBST"
+    input_dir = "/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Indices/TOAR/BSI"
 
     # Define the output directory where histograms will be saved
-    output_histogram_dir = "/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Indices/CBST_Histograms/8_Band"
+    output_histogram_dir = "/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Indices/BSI_Histograms/8_Band"
 
     
-    # Don't forget to change the index type in the Plot heading between BST and CBST
-    index_type = "CBST"
+    # Don't forget to change the index type in the Plot heading between BSI and CBSI
+    # And TOAR and SR
+    # Aswell as TOAR and SR
+    index_type = "BSI_TOAR"
     
     # Process the histograms
     process_histograms(input_dir, index_type, output_histogram_dir)

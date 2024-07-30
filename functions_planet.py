@@ -20,6 +20,46 @@ import glob, os, shutil, re
 #### for run_01_merge_tiles ###############################################
 
 
+# Helper function to mask overlapping pixels
+def apply_water_mask(image_path, water_mask_array, water_mask_transform):
+    #%%
+    ds = gdal.Open(image_path, gdal.GA_Update)
+    transform = ds.GetGeoTransform()
+
+    # Compute offsets and sizes
+    x_offset = int((water_mask_transform[0] - transform[0]) / transform[1])
+    y_offset = int((water_mask_transform[3] - transform[3]) / transform[5])
+    
+    x_end = x_offset + water_mask_array.shape[1]
+    y_end = y_offset + water_mask_array.shape[0]
+    
+    x_start = max(0, x_offset)
+    y_start = max(0, y_offset)
+    
+    x_end = min(ds.RasterXSize, x_end)
+    y_end = min(ds.RasterYSize, y_end)
+    
+    mask_x_start = max(0, -x_offset)
+    mask_y_start = max(0, -y_offset)
+    
+    mask_x_end = mask_x_start + (x_end - x_start)
+    mask_y_end = mask_y_start + (y_end - y_start)
+
+    # Apply the mask to each band
+    if x_start < x_end and y_start < y_end:
+        for band_idx in range(1, ds.RasterCount + 1):
+            band = ds.GetRasterBand(band_idx)
+            array = band.ReadAsArray()
+            mask = water_mask_array[mask_y_start:mask_y_end, mask_x_start:mask_x_end] > 0
+            nodata_value = band.GetNoDataValue() if band.GetNoDataValue() is not None else 0
+            array[y_start:y_end, x_start:x_end][mask] = nodata_value
+            band.WriteArray(array)
+            band.FlushCache()
+    
+    ds = None
+#%%
+
+
 # Read AOI from shapefile
 def read_shapefile(shapefile_path):
     #%%
@@ -144,7 +184,7 @@ def do_index_calculation_4band(file, width, output_name, output_dir):
     print(f"{output_name} calculation and export completed for {file}. Output saved as {out_file}")
 #%% end of function
 
-def do_index_calculation_8band(file, width, output_name, output_dir):
+def do_index_calculation_8band(file, width, output_name, output_dir, product_type):
     #%%
     '''
     This function needs 8Band surface reflectance data as input
@@ -171,13 +211,13 @@ def do_index_calculation_8band(file, width, output_name, output_dir):
     if output_name == "NDVI":
         denominator = (nir_band + red_band)
         index = (nir_band - red_band) / denominator
-    elif output_name == "BST":
+    elif output_name == "BSI":
         denominator = (nir_band + blue_band)
         index = (nir_band - blue_band) / denominator
-    elif output_name == "CBST":
+    elif output_name == "CBSI":
         denominator = (nir_band + coastal_blue_band)
         index = (nir_band - coastal_blue_band) / denominator
-    elif output_name == "GST":
+    elif output_name == "GSI":
         denominator = (nir_band + green_band)
         index = (nir_band - green_band) / denominator
     elif output_name == "SI_Index":
@@ -197,7 +237,7 @@ def do_index_calculation_8band(file, width, output_name, output_dir):
 
     # Create the output file for each tile
     driver = gdal.GetDriverByName('GTiff')
-    out_file = os.path.join(output_dir, f'{base_name}_{output_name}_width_{width}px.tif')
+    out_file = os.path.join(output_dir, f'{base_name}_{product_type}_{output_name}_width_{width}px.tif')
     out_dataset = driver.Create(out_file, dataset.RasterXSize, dataset.RasterYSize, 1, gdal.GDT_Float32)
 
     # Set georeference info to the output file
@@ -223,29 +263,6 @@ def do_index_calculation_8band(file, width, output_name, output_dir):
 
 
 #%% endend of function
-
-def mask_water(nir_band, green_band, threshold):
-    #%%
-    """
-    Masks water areas in the image based on a threshold calculated from green
-    and nir bands. Based on Ji, L., Zhang, L., & Wylie, B. (2009). 
-    Analysis of dynamic thresholds for the normalized difference water index. 
-    Photogrammetric engineering & remote sensing, 75(11), 1307-1317.
-    and Ji, L., Zhang, L., & Wylie, B. (2009). Analysis of dynamic thresholds for the normalized difference water index. Photogrammetric engineering & remote sensing, 75(11), 1307-1317.
-    
-    Parameters:
-    red_band (numpy array): Array representing the red band of the image.
-    threshold (float): Threshold value to identify water areas.
-    
-    Returns:
-    numpy array: Masked array where water areas are set to NaN.
-    
-    Deactivated until further notice
-    
-    """
-    water_mask = (green_band - nir_band)/(green_band + nir_band) > threshold
-    return water_mask
-#%% end of function
 
 
 

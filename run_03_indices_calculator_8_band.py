@@ -18,26 +18,29 @@ from functions_planet import *
 import glob, os, shutil
 
 # Define file paths and date pattern
-input_pattern = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/files_ready/8_band/2024_04_16__psscene_analytic_8b_sr_udm2/*.tif'  
+input_pattern = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/files_ready/8_band/TOAR/*.tif'  
 # Adjust the pattern to match your tiles
-output_dir = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/code/temp/'
+output_dir = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Indices/TOAR'
 rgb_dir = os.path.join(output_dir, 'RGB')
 ndvi_dir = os.path.join(output_dir, 'NDVI')
-bst_dir = os.path.join(output_dir, 'BST')
-cbst_dir = os.path.join(output_dir, 'CBST')
-gst_dir = os.path.join(output_dir, 'GST')
+bsi_dir = os.path.join(output_dir, 'BSI')
+cbsi_dir = os.path.join(output_dir, 'CBSI')
+gsi_dir = os.path.join(output_dir, 'GSI')
 SI_Index_dir = os.path.join(output_dir, 'SI_Index')
+
+# For name string define product type either -> TOAR or SR
+product_type = "TOAR"
 
 # List for the desired index calculations:
 # NDVI
-# BST - blue snow threshold
-# CBST - coastal blue snow threshold
-# GST - green snow threshold
+# BST - blue snow index
+# CBST - coastal blue snow index
+# GST - green snow index
 # SI_Index - snow index
-outputs = ["NDVI", "BST", "CBST", "GST", "SI_Index"]
+outputs = ["NDVI", "BSI", "CBSI", "GSI", "SI_Index"]
 
 # List for the desired output folders
-out_dirs = [ndvi_dir, bst_dir, cbst_dir, gst_dir, SI_Index_dir]
+out_dirs = [ndvi_dir, bsi_dir, cbsi_dir, gsi_dir, SI_Index_dir]
 
 # Create the output directories if they don't exist
 os.makedirs(rgb_dir, exist_ok=True)
@@ -65,4 +68,4 @@ if not filtered_files:
 # Loop through each index and its corresponding directory
 for output_name, output_dir in zip(outputs, out_dirs):
     for file, width in filtered_files:
-        do_index_calculation_8band(file, width, output_name, output_dir)
+        do_index_calculation_8band(file, width, output_name, output_dir, product_type)
