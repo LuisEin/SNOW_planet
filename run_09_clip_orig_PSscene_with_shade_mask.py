@@ -1,3 +1,16 @@
+# -*- coding: utf-8 -*-
+'''
+Created on Thursday Aug 01 10:23:12 2024
+
+This file takes shaded CBSI data that has been processed in run_07_shadow_split.
+Uses these files to create a binary mask of the shaded areas and 
+Clips the original 8_Band PS scenes with that mask.
+Saves these clipped files to a new directory.
+
+
+@author: luis
+'''
+
 import os
 from osgeo import gdal, ogr
 import numpy as np
@@ -5,28 +18,52 @@ import numpy as np
 def load_tif_files(directory):
     return [os.path.join(directory, f) for f in os.listdir(directory) if f.endswith('.tif')]
 
-def create_binary_mask_tif(shady_tif, mask_tif_path):
-    # Load shady parts tif
-    shady_ds = gdal.Open(shady_tif)
-    shady_band = shady_ds.GetRasterBand(1)
-    shady_array = shady_band.ReadAsArray()
-    
-    # Create a binary mask of the shady parts: 1 where there's a value, 0 elsewhere
-    mask = np.where(shady_array > 0, 1, 0).astype(np.uint8)
-    
-    # Save the mask to a new TIF file
-    driver = gdal.GetDriverByName('GTiff')
-    mask_ds = driver.Create(mask_tif_path, shady_ds.RasterXSize, shady_ds.RasterYSize, 1, gdal.GDT_Byte)
-    
-    if mask_ds is None:
-        raise RuntimeError(f"Failed to create mask file: {mask_tif_path}")
+def create_binary_mask_tif(shady_file, mask_dir):
+    # Load the TIFF file
+    ds = gdal.Open(shady_file)
+    if ds is None:
+        print(f"Failed to open {shady_file}")
+        return None
 
+    # Read the first band (assuming single-band image)
+    band = ds.GetRasterBand(1)
+    data = band.ReadAsArray()
+
+    # Check if data contains valid values
+    if data is None:
+        print(f"No valid data in {shady_file}")
+        return None
+
+    # Create a mask: 1 for valid (non-nan) areas, 0 for nan areas
+    mask = np.where(np.isnan(data), np.nan, 1)
+
+    # Create the output mask file path with the new naming convention
+    base_name = os.path.basename(shady_file).split('_PS_TOAR_8b')[0]
+    output_mask_path = os.path.join(mask_dir, f"{base_name}_PS_TOAR_8b_shadow_masked.tif")
+
+    # Save the mask to a new TIFF file with the same resolution and CRS
+    driver = gdal.GetDriverByName("GTiff")
+    mask_ds = driver.Create(
+        output_mask_path,
+        ds.RasterXSize,
+        ds.RasterYSize,
+        1,
+        gdal.GDT_Float32,
+    )
+
+    # Set the geotransform and projection from the original dataset
+    mask_ds.SetGeoTransform(ds.GetGeoTransform())
+    mask_ds.SetProjection(ds.GetProjection())
+
+    # Write the mask to the output file
     mask_ds.GetRasterBand(1).WriteArray(mask)
-    mask_ds.SetGeoTransform(shady_ds.GetGeoTransform())
-    mask_ds.SetProjection(shady_ds.GetProjection())
-    
-    shady_ds = None
+
+    # Clean up
     mask_ds = None
+    ds = None
+
+    print(f"Processed and saved mask file for {shady_file}")
+    return output_mask_path
 
 def clip_with_mask(orig_tif, mask_tif, output_filename):
     # Load original tif
@@ -81,14 +118,10 @@ def process_clipping(shady_dir, orig_dir, output_dir, mask_dir):
         date_time_prefix = "_".join(base_name.split('_')[:2])
         if date_time_prefix in orig_dict:
             orig_file = orig_dict[date_time_prefix]
-            mask_tif_path = os.path.join(mask_dir, f"{date_time_prefix}_mask.tif")
-            output_filename = os.path.join(output_dir, f"{date_time_prefix}_PS_TOAR_8b.tif")
-            
-            # Create the binary mask TIF file
-            create_binary_mask_tif(shady_file, mask_tif_path)
-            
-            # Clip the original image using the mask TIF file
-            clip_with_mask(orig_file, mask_tif_path, output_filename)
+            mask_tif_path = create_binary_mask_tif(shady_file, mask_dir)
+            if mask_tif_path:
+                output_filename = os.path.join(output_dir, f"{date_time_prefix}_PS_TOAR_8b.tif")
+                clip_with_mask(orig_file, mask_tif_path, output_filename)
         else:
             print(f"Original file for {shady_file} not found.")
 

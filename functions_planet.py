@@ -15,7 +15,7 @@ from datetime import datetime
 from skimage.morphology import reconstruction
 import numpy as np
 import matplotlib.pyplot as plt
-import glob, os, shutil, re
+import glob, os, shutil, re, cv2
 
 #### for run_01_merge_tiles ###############################################
 
@@ -103,6 +103,48 @@ def check_coverage(image_path, aoi_geom):
     print(f"Image Geometry: {ds_geom.ExportToWkt()}")
     return aoi_geom.Within(ds_geom)
 #%% end of function
+
+## This is for the OpenCV Version run_01.1 ######
+# Apply Gaussian filter
+def apply_gaussian_filter(input_path, output_path):
+    #%%
+    ds = gdal.Open(input_path)
+    driver = gdal.GetDriverByName('GTiff')
+    out_ds = driver.CreateCopy(output_path, ds, 0)
+    
+    for band_idx in range(1, out_ds.RasterCount + 1):
+        band = out_ds.GetRasterBand(band_idx)
+        array = band.ReadAsArray()
+        blurred_array = cv2.GaussianBlur(array, (5, 5), 0)
+        band.WriteArray(blurred_array)
+        band.FlushCache()
+    
+    ds = None
+    out_ds = None
+    #%%
+
+# Convert to grayscale
+def convert_to_grayscale(input_path, output_path):
+    #%%
+    ds = gdal.Open(input_path)
+    driver = gdal.GetDriverByName('GTiff')
+    out_ds = driver.Create(output_path, ds.RasterXSize, ds.RasterYSize, 1, gdal.GDT_Byte)
+    out_ds.SetGeoTransform(ds.GetGeoTransform())
+    out_ds.SetProjection(ds.GetProjection())
+    
+    array = np.zeros((ds.RasterYSize, ds.RasterXSize), dtype=np.float32)
+    for band_idx in range(1, ds.RasterCount + 1):
+        band = ds.GetRasterBand(band_idx)
+        band_array = band.ReadAsArray().astype(np.float32)
+        array += band_array / ds.RasterCount
+    
+    gray_array = cv2.normalize(array, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+    out_ds.GetRasterBand(1).WriteArray(gray_array)
+    out_ds.FlushCache()
+    
+    ds = None
+    out_ds = None
+    #%%
 
 
 #### from former run_indices_calculator.py ####################################

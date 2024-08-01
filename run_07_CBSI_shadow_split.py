@@ -2,10 +2,10 @@
 '''
 Created on Monday Jul 29 10:23:12 2024
 
-This file takes Coastal Blue Snow Index calulated GeoTiff, analyses its 
+This file takes Coastal Blue Snow Index calculated GeoTiff, analyses its 
 Histogram and locates the most negative significant peak.
 Then splits it off as these are the potentially shaded areas.
-Saves the shaded and the non shaded areas as new files.
+Saves the shaded and the non-shaded areas as new files.
 
 @author: luis
 '''
@@ -17,8 +17,11 @@ from osgeo import gdal
 import os
 from datetime import datetime
 
-def plot_histogram(data, bins=50, date_str=""):
+def plot_histogram(data, bins=50, date_str="", threshold_value=None):
     plt.hist(data, bins=bins, color='blue', alpha=0.7)
+    if threshold_value is not None:
+        plt.axvline(x=threshold_value, color='red', linestyle='--', label=f'Threshold: {threshold_value:.2f}')
+        plt.legend()
     plt.xlabel('Coastal Blue Index')
     plt.ylabel('Frequency')
     plt.title(f'Histogram of Coastal Blue Index - {date_str}')
@@ -50,7 +53,7 @@ def split_shadow_area(data, peaks, valleys, bin_edges):
     shadow_area[~shadow_mask] = np.nan
     original_without_shadow = np.copy(data)
     original_without_shadow[shadow_mask] = np.nan
-    return shadow_area, original_without_shadow
+    return shadow_area, original_without_shadow, threshold_value
 
 def process_raster(file_path, shadow_output_dir, non_shadow_output_dir):
     dataset = gdal.Open(file_path)
@@ -66,14 +69,14 @@ def process_raster(file_path, shadow_output_dir, non_shadow_output_dir):
     # Flatten the array and remove NaN values for histogram
     valid_data = data[~np.isnan(data)].flatten()
 
-    # Plot the histogram
-    plot_histogram(valid_data, date_str=date_str)
-
     # Identify peaks and valleys in the histogram
     peaks, valleys, bin_edges = identify_peaks_and_valleys(valid_data)
 
     # Split the shadow area
-    shadow_area, original_without_shadow = split_shadow_area(data, peaks, valleys, bin_edges)
+    shadow_area, original_without_shadow, threshold_value = split_shadow_area(data, peaks, valleys, bin_edges)
+
+    # Plot the histogram with the threshold value
+    plot_histogram(valid_data, date_str=date_str, threshold_value=threshold_value)
 
     # Define output file paths
     shadow_output_path = os.path.join(shadow_output_dir, file_name.replace('.tif', '_shadow_area.tif'))
@@ -112,4 +115,3 @@ shadow_output_directory = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/
 non_shadow_output_directory = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Shadow_mask/shade_no_shade_8b_TOAR/non_shaded'
 
 process_directory(input_directory, shadow_output_directory, non_shadow_output_directory)
-

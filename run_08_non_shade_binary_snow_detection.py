@@ -1,3 +1,21 @@
+# -*- coding: utf-8 -*-
+'''
+Created on Wednesday Jul 31 10:23:12 2024
+
+This file takes non_shaded CBSI data that has been processed in run_07_shadow_split.
+It creates a Histogram and looks for the optimal Threshold of where the 
+Peak with the snowy values ends.
+This works with a loop, that iterates over each bin right of the peak
+And calculates the percentage decrease each time, stores it in a list.
+If the current percentage decrease is significantly smaller than the average 
+In the list, the loop is stopped and threshold is set. 
+The significance is calculated with the percentage threshold in the
+Identify_snow_threshold() Function, to detedct a significant change in the pattern.
+Empirically set to 0.1
+
+@author: luis 
+'''
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import find_peaks, savgol_filter
@@ -11,7 +29,7 @@ def plot_histogram(data, bins=50, date_str="", threshold_value=None, offset=None
         plt.axvline(x=threshold_value, color='red', linestyle='--', label=f'Threshold: {threshold_value:.2f}')
     plt.xlabel('Index Value')
     plt.ylabel('Frequency')
-    plt.title(f'Histogram of Index - {date_str}')
+    plt.title(f'Histogram of Coastal Blue Index - {date_str}')
     if threshold_value is not None:
         plt.text(0.95, 0.95, f'Threshold: {threshold_value:.2f}\nOffset: {offset}',
                  transform=plt.gca().transAxes, fontsize=10, verticalalignment='top', horizontalalignment='right')
@@ -63,8 +81,9 @@ def identify_snow_threshold(data, bins=50, smooth_window=11, poly_order=2, perce
     return threshold_value
 
 def classify_snow(data, threshold_value):
-    snow_mask = data <= threshold_value
-    classified_data = np.where(snow_mask, 1, 0)
+    classified_data = np.full(data.shape, np.nan, dtype=np.float32)
+    classified_data[data <= threshold_value] = 1
+    classified_data[data > threshold_value] = 0
     return classified_data
 
 def process_no_shade_raster(file_path, snow_output_dir, percentage_threshold=0.5, min_bins_from_peak=3):
