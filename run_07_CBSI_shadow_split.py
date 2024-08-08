@@ -20,7 +20,8 @@ from datetime import datetime
 def plot_histogram(data, bins=50, date_str="", threshold_value=None):
     plt.hist(data, bins=bins, color='blue', alpha=0.7)
     if threshold_value is not None:
-        plt.axvline(x=threshold_value, color='red', linestyle='--', label=f'Threshold: {threshold_value:.2f}')
+        plt.axvline(x=threshold_value, color='red', linestyle='--', 
+                    label=f'Threshold: {threshold_value:.2f}, \nOffset Value: {offset_value:.2f}')
         plt.legend()
     plt.xlabel('Coastal Blue Index')
     plt.ylabel('Frequency')
@@ -36,7 +37,7 @@ def identify_peaks_and_valleys(data, bins=50, height_threshold=0.05, prominence_
     
     return peaks, valleys, bin_edges
 
-def split_shadow_area(data, peaks, valleys, bin_edges):
+def split_shadow_area(data, peaks, valleys, bin_edges, offset=0.0):
     most_negative_peak_index = peaks[0]
     
     # Find the valley between the most negative peak and the next significant peak
@@ -46,7 +47,7 @@ def split_shadow_area(data, peaks, valleys, bin_edges):
     else:
         valley_index = len(bin_edges) - 2
     
-    threshold_value = bin_edges[valley_index + 1]
+    threshold_value = bin_edges[valley_index + 1] + offset
     
     shadow_mask = data <= threshold_value
     shadow_area = np.copy(data)
@@ -55,7 +56,7 @@ def split_shadow_area(data, peaks, valleys, bin_edges):
     original_without_shadow[shadow_mask] = np.nan
     return shadow_area, original_without_shadow, threshold_value
 
-def process_raster(file_path, shadow_output_dir, non_shadow_output_dir):
+def process_raster(file_path, shadow_output_dir, non_shadow_output_dir, offset=0.0):
     dataset = gdal.Open(file_path)
     band = dataset.GetRasterBand(1)
     data = band.ReadAsArray().astype(np.float32)
@@ -72,8 +73,8 @@ def process_raster(file_path, shadow_output_dir, non_shadow_output_dir):
     # Identify peaks and valleys in the histogram
     peaks, valleys, bin_edges = identify_peaks_and_valleys(valid_data)
 
-    # Split the shadow area
-    shadow_area, original_without_shadow, threshold_value = split_shadow_area(data, peaks, valleys, bin_edges)
+    # Split the shadow area with the offset
+    shadow_area, original_without_shadow, threshold_value = split_shadow_area(data, peaks, valleys, bin_edges, offset=offset)
 
     # Plot the histogram with the threshold value
     plot_histogram(valid_data, date_str=date_str, threshold_value=threshold_value)
@@ -103,15 +104,20 @@ def save_raster(data, output_path, reference_dataset):
     out_dataset.FlushCache()
     out_dataset = None
 
-def process_directory(input_directory, shadow_output_dir, non_shadow_output_dir):
+def process_directory(input_directory, shadow_output_dir, non_shadow_output_dir, offset=0.0):
     for filename in os.listdir(input_directory):
         if filename.endswith('.tif'):
             file_path = os.path.join(input_directory, filename)
-            process_raster(file_path, shadow_output_dir, non_shadow_output_dir)
+            process_raster(file_path, shadow_output_dir, non_shadow_output_dir, offset=offset)
 
 # Paths to your directories
-input_directory = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Indices/TOAR/CBSI'
-shadow_output_directory = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Shadow_mask/shade_no_shade_8b_TOAR/shaded'
-non_shadow_output_directory = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Shadow_mask/shade_no_shade_8b_TOAR/non_shaded'
+input_directory = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Indices/TOAR_gaussian_filtered/CBSI'
+shadow_output_directory = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Shadow_mask/shade_no_shade_8b_TOAR_gaussian_filtered/shaded'
+non_shadow_output_directory = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Shadow_mask/shade_no_shade_8b_TOAR_gaussian_filtered/non_shaded'
 
-process_directory(input_directory, shadow_output_directory, non_shadow_output_directory)
+os.makedirs(shadow_output_directory, exist_ok=True)
+os.makedirs(non_shadow_output_directory, exist_ok=True)
+
+# Example usage with an offset
+offset_value = 0.045  # Adjust this value as needed
+process_directory(input_directory, shadow_output_directory, non_shadow_output_directory, offset=offset_value)

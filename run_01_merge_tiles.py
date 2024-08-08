@@ -2,9 +2,11 @@
 '''
 Created on Tuesday Jul 09 17:13:12 2024
 
-This file takes PlanetScope Scenes by the same date and puts the single tiles 
-together.
-Saves them as one tif file containing the whole AOI.
+This file takes PlanetScope Scenes by the same date, sorts out for the largest
+Which covers the biggest area.
+Then applies water mask of Eibsee and Frillensee.
+Checks if AOI is covered.
+Saves them as a tif file.
 
 This is the first script to use when starting an analysis of PlanetScope data
 

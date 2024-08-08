@@ -123,7 +123,7 @@ def apply_gaussian_filter(input_path, output_path):
     out_ds = None
     #%%
 
-# Convert to grayscale
+# Convert to grayscale - maybe use this function right before the actual analysis
 def convert_to_grayscale(input_path, output_path):
     #%%
     ds = gdal.Open(input_path)

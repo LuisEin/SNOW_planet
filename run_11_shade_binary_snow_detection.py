@@ -1,14 +1,3 @@
-# -*- coding: utf-8 -*-
-'''
-Created on Wednesday Aug 1 10:23:12 2024
-
-This file processes GeoTiff files with shade parts of a Planet Scope scene,
-uses the first band (coastal blue) for binary snow detection,
-plots a histogram with a threshold value, and saves binary classified snow images.
-
-@author: luis
-'''
-
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import find_peaks
@@ -26,11 +15,11 @@ def plot_histogram_with_threshold(data, bins=50, threshold=None, date_str=""):
     plt.legend()
     plt.show()
 
-def identify_threshold(data, bins=50, prominence_threshold=0.01, width_threshold=1):
+def identify_threshold(data, bins=50, prominence_threshold=0.01, width_threshold=1, height_threshold=None):
     histogram, bin_edges = np.histogram(data, bins=bins)
     
     # Identify peaks
-    peaks, _ = find_peaks(histogram, prominence=prominence_threshold, width=width_threshold)
+    peaks, _ = find_peaks(histogram, prominence=prominence_threshold, width=width_threshold, height=height_threshold)
     valleys, _ = find_peaks(-histogram, prominence=prominence_threshold, width=width_threshold)  # Invert histogram to find valleys
     
     # Choose the valley between the two peaks as the threshold
@@ -56,7 +45,7 @@ def binary_snow_classification(data, threshold):
     binary_data[data > threshold] = 1
     return binary_data
 
-def process_raster(file_path, output_dir):
+def process_raster(file_path, output_dir, height_threshold):
     dataset = gdal.Open(file_path)
     band = dataset.GetRasterBand(1)
     data = band.ReadAsArray().astype(np.float32)
@@ -71,7 +60,7 @@ def process_raster(file_path, output_dir):
     valid_data = data[~np.isnan(data)].flatten()
 
     # Identify threshold
-    threshold_value = identify_threshold(valid_data)
+    threshold_value = identify_threshold(valid_data, height_threshold=height_threshold)
 
     # Plot the histogram with threshold
     plot_histogram_with_threshold(valid_data, threshold=threshold_value, date_str=date_str)
@@ -102,14 +91,22 @@ def save_raster(data, output_path, reference_dataset):
     out_dataset.FlushCache()
     out_dataset = None
 
-def process_directory(input_directory, output_directory):
+def process_directory(input_directory, output_directory, height_threshold):
     for filename in os.listdir(input_directory):
         if filename.endswith('.tif'):
             file_path = os.path.join(input_directory, filename)
-            process_raster(file_path, output_directory)
+            try:
+                process_raster(file_path, output_directory, height_threshold)
+            except ValueError as e:
+                print(f"Error processing file {file_path}: {e}")
 
 # Paths to your directories
-input_directory = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Shadow_mask/shadow_masked_original_ready_files'
-output_directory = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/snow_classified/shaded'
+input_directory = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Shadow_mask/shadow_masked_original_ready_files_gaussian_filtered'
+output_directory = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/snow_classified_gaussian_filtered/shaded'
 
-process_directory(input_directory, output_directory)
+os.makedirs(output_directory, exist_ok=True)
+
+# Set the height threshold for peak detection
+height_threshold = 200  # Adjust this value as needed
+
+process_directory(input_directory, output_directory, height_threshold)

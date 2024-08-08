@@ -18,9 +18,9 @@ from functions_planet import *
 import glob, os, shutil
 
 # Define file paths and date pattern
-input_pattern = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/files_ready/8_band/TOAR/*.tif'  
+input_pattern = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/files_ready/8_band_gaussian_filtered/*.tif'  
 # Adjust the pattern to match your tiles
-output_dir = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Indices/TOAR'
+output_dir = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Indices/TOAR_gaussian_filtered'
 rgb_dir = os.path.join(output_dir, 'RGB')
 ndvi_dir = os.path.join(output_dir, 'NDVI')
 bsi_dir = os.path.join(output_dir, 'BSI')
