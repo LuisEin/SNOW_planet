@@ -158,10 +158,10 @@ def process_no_shade_directory(input_directory, snow_output_dir, percentage_thre
             process_no_shade_raster(file_path, snow_output_dir, percentage_threshold=percentage_threshold, bin_shift_value=bin_shift_value)
 
 # Path to your directory containing the no-shade .tif files
-input_directory = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Shadow_mask/shade_no_shade_8b_TOAR_gaussian_filtered/non_shaded'
+input_directory = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Shadow_mask/shade_no_shade_8b_TOAR_gaussian_filtered/non_shaded_offset_0.02'
 
 # Define output directory for snow classified images
-snow_output_directory = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/snow_classified_gaussian_filtered/non_shaded'
+snow_output_directory = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/snow_classified_gaussian_filtered/non_shaded_offset_0.02'
 
 os.makedirs(input_directory, exist_ok=True)
 os.makedirs(snow_output_directory, exist_ok=True)

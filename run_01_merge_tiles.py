@@ -24,7 +24,7 @@ from functions_planet import read_shapefile, apply_water_mask, extract_time_from
 # SR : *AnalyticMS_SR_8b_clip.tif
 # TOAR : *AnalyticMS_8b_clip.tif
 # Läuft irgendwie im Moment nur gut mit 8 Band Daten
-input_pattern = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/files_raw/8_band/matching_to_SWS_02_24_until_06-26_TOAR_psscene_analytic_8b_udm2/PSScene/*AnalyticMS_8b_clip.tif'
+input_pattern = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/files_raw/8_band/2022_08_14_and_Spring_2021_from_2021_09_04_on_and_Spring_2023_March_to_June_TOAR_psscene_analytic_8b_udm2/PSScene/*AnalyticMS_8b_clip.tif'
 output_dir = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/files_ready/8_band/TOAR'
 shapefile_path = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/Shapefiles/shapefile_Zugspitze/03_AOI_shp_zugspitze_reproj_for_code/AOI_zugspitze_reproj_32632.shp'
 water_mask_path = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/Shapefiles/Eibsee/Grid_files/Eibsee_Frillensee_water_mask.tif'
@@ -81,7 +81,7 @@ for date_str, file_list in files_by_date.items():
 
     # Otherwise, clip the images to fill the AOI
     for i, file in enumerate(file_list):
-        output_path = os.path.join(output_dir, f"{date_str}_clip_{i}.tif")
+        output_path = os.path.join(output_dir, f"{date_str}_{time_str}_PS_{processing_type}_{band_count}_ready.tif")
         gdal.Warp(output_path, file, cutlineDSName=shapefile_path, cropToCutline=True, dstNodata=np.nan)
         apply_water_mask(output_path, water_mask_array, water_mask_transform)
         print(f"Clipped image {file} to AOI and saved to {output_path}")

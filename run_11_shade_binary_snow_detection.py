@@ -1,3 +1,27 @@
+# -*- coding: utf-8 -*-
+"""
+This script processes GeoTiff files to detect snow-covered regions in shaded 
+parts of a PlanetScope scene. The steps are as follows:
+
+1. Load the coastal blue band from GeoTiff.
+2. Generate a histogram of pixel intensities.
+3. Identify a threshold for snow detection by finding peaks and valleys 
+   in the histogram. Peaks must meet a specified minimum height.
+4. Classify pixels as snow-covered (1) or not (0) based on the threshold.
+5. Save the binary snow classification as a new GeoTiff.
+6. Process all GeoTiff files in the input directory and save results in 
+   the output directory.
+
+Parameters:
+- input_directory: Directory with input GeoTiff files.
+- output_directory: Directory to save classified GeoTiff files.
+- height_threshold: Minimum peak height for histogram peak detection.
+
+Usage: Adjust paths and height_threshold, then run the script.
+
+@author: Luis
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import find_peaks

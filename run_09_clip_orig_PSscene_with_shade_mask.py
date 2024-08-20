@@ -127,16 +127,16 @@ def process_clipping(shady_dir, orig_dir, output_dir, mask_dir):
 
 if __name__ == "__main__":
     # Define the input directory containing the shady parts TIFF files
-    shady_dir = "/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Shadow_mask/shade_no_shade_8b_TOAR_gaussian_filtered/shaded"
+    shady_dir = "/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Shadow_mask/shade_no_shade_8b_TOAR_gaussian_filtered/shaded_offset_0.02"
 
     # Define the input directory containing the original images
     orig_dir = "/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/files_ready/8_band_gaussian_filtered"
 
     # Define the output directory where clipped TIFF files will be saved
-    output_dir = "/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Shadow_mask/shadow_masked_original_ready_files_gaussian_filtered"
+    output_dir = "/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Shadow_mask/shadow_masked_original_ready_files_gaussian_filtered_offset_0.02"
 
     # Define the directory where mask TIFF files will be saved
-    mask_dir = "/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Shadow_mask/mask_files_gaussian_filtered"
+    mask_dir = "/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Shadow_mask/mask_files_gaussian_filtered_offset_0.02"
 
     # gaussian filtered data? -> set True if not -> False
     Gauss = True

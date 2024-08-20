@@ -112,12 +112,12 @@ def process_directory(input_directory, shadow_output_dir, non_shadow_output_dir,
 
 # Paths to your directories
 input_directory = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Indices/TOAR_gaussian_filtered/CBSI'
-shadow_output_directory = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Shadow_mask/shade_no_shade_8b_TOAR_gaussian_filtered/shaded'
-non_shadow_output_directory = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Shadow_mask/shade_no_shade_8b_TOAR_gaussian_filtered/non_shaded'
+shadow_output_directory = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Shadow_mask/shade_no_shade_8b_TOAR_gaussian_filtered/shaded_offset_0.02'
+non_shadow_output_directory = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Shadow_mask/shade_no_shade_8b_TOAR_gaussian_filtered/non_shaded_offset_0.02'
 
 os.makedirs(shadow_output_directory, exist_ok=True)
 os.makedirs(non_shadow_output_directory, exist_ok=True)
 
 # Example usage with an offset
-offset_value = 0.045  # Adjust this value as needed
+offset_value = 0.02  # Adjust this value as needed
 process_directory(input_directory, shadow_output_directory, non_shadow_output_directory, offset=offset_value)
