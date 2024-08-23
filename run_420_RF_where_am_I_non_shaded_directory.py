@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 # Define Your Paths Here
 # ====================
 # Path to the training data GeoTIFF (Snow=1, NoSnow=0, NoData=255)
-training_data_tif = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/RF/training_data/20240229_binary_snow_training_CBSI_non_shaded_143_polygons.tif'
+training_data_tif = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/RF/training_data/non_shaded/20240229_binary_snow_training_CBSI_non_shaded_143_polygons.tif'
 
 # Directory containing the indexed scenes that need to be classified
 index_tif_dir = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Shadow_mask/shade_no_shade_8b_TOAR_gaussian_filtered/non_shaded_offset_0.02/'
