@@ -1,5 +1,6 @@
 import os
 import glob
+import datetime
 from osgeo import gdal, ogr
 import numpy as np
 import pandas as pd
@@ -10,9 +11,6 @@ import matplotlib.pyplot as plt
 # ====================
 # Define Your Paths Here
 # ====================
-# Path to the training data GeoTIFF (Snow=1, NoSnow=0, NoData=255)
-training_data_tif = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/RF/training_data/non_shaded/20240229_binary_snow_training_CBSI_non_shaded_143_polygons.tif'
-
 # Directory containing the indexed scenes that need to be classified
 index_tif_dir = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Shadow_mask/shade_no_shade_8b_TOAR_gaussian_filtered/non_shaded_offset_0.02/'
 
@@ -21,6 +19,9 @@ shaded_mask_dir = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetSc
 
 # Directory containing the true extent rasters
 true_extent_raster_dir = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/files_ready/8_band_gaussian_filtered/'
+
+# Directory containing the training data files
+training_data_dir = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/RF/training_data/non_shaded/'
 
 # Path to the AOI shapefile (remains constant)
 aoi_shapefile = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/Shapefiles/shapefile_Zugspitze/03_AOI_shp_zugspitze_reproj_for_code/AOI_zugspitze_reproj_32632.shp'
@@ -32,7 +33,10 @@ model_save_dir = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetSco
 output_dir = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/RF/binary_classification/non_shaded/'
 
 # Set the maximum number of files to process (set None for no limit)
-max_files_to_process = None  # Set to None to process all files
+max_files_to_process = 3  # Set to None to process all files
+
+# Get today's date in YYYYMMDD format
+today_str = datetime.datetime.today().strftime('%Y%m%d')
 
 # ====================
 # Functions
@@ -75,29 +79,45 @@ def resample_raster_to_match(reference_raster_path, target_raster_path, output_r
 
     return output_raster_path
 
-def create_training_data_from_raster(training_raster, index_raster, nodata_value=255):
-    """Create a DataFrame with training data extracted from the training raster and index raster."""
-    valid_mask = (training_raster != nodata_value) & (index_raster != nodata_value)
-    data = {
-        'index': index_raster[valid_mask].flatten(),
-        'label': training_raster[valid_mask].flatten()
-    }
-    df = pd.DataFrame(data)
+def create_training_data_from_multiple_rasters(training_raster_list, index_raster, nodata_value=255):
+    """Create a DataFrame with training data extracted from multiple training rasters and index raster."""
+    dfs = []
+    for training_raster in training_raster_list:
+        valid_mask = (training_raster != nodata_value) & (index_raster != nodata_value)
+        data = {
+            'index': index_raster[valid_mask].flatten(),
+            'label': training_raster[valid_mask].flatten()
+        }
+        dfs.append(pd.DataFrame(data))
     
-    if df['label'].nunique() < 2:
+    training_data = pd.concat(dfs, ignore_index=True)
+    
+    if training_data['label'].nunique() < 2:
         raise ValueError("Training data does not contain both classes (1 and 0). Check your input data.")
     
-    return df
+    return training_data
 
 def train_model(training_data, model_save_path):
-    """Train the Random Forest model."""
+    """Train the Random Forest model with a balanced configuration."""
     X = training_data[['index']]
     y = training_data['label']
     
-    model = RandomForestClassifier(n_estimators=100, max_depth=None, random_state=42)
+    # Configuring a balanced Random Forest model
+    model = RandomForestClassifier(
+        n_estimators=200,  # Number of trees in the forest
+        max_depth=20,      # Limit the depth of each tree
+        min_samples_split=2,  # Minimum samples required to split a node
+        min_samples_leaf=1,   # Minimum samples required to be at a leaf node
+        max_features='sqrt',  # Maximum number of features to consider for each split
+        max_samples=0.9,      # Use 90% of the data for training each tree
+        bootstrap=True,       # Use bootstrap samples for building trees
+        random_state=42,      # Ensure reproducibility
+        n_jobs=-2             # Leave one core free for other tasks
+    )
     model.fit(X, y)
     
     joblib.dump(model, model_save_path)
+
 
 def apply_shaded_mask_to_prediction(prediction_raster, shaded_mask_raster, nodata_value):
     """Apply the shaded mask to the prediction raster."""
@@ -152,6 +172,7 @@ def run_prediction(input_raster, model_path, output_path, geotransform, projecti
 index_files = sorted(glob.glob(os.path.join(index_tif_dir, '*.tif')))
 shaded_mask_files = sorted(glob.glob(os.path.join(shaded_mask_dir, '*.tif')))
 true_extent_files = sorted(glob.glob(os.path.join(true_extent_raster_dir, '*.tif')))
+training_files = sorted(glob.glob(os.path.join(training_data_dir, '*Polygons.tif')))
 
 # Ensure we have matching files
 if not (len(index_files) == len(shaded_mask_files) == len(true_extent_files)):
@@ -165,25 +186,26 @@ for i, (index_file, shaded_mask_file, true_extent_file) in enumerate(zip(index_f
     # Extract date from the index file name (assuming the date is in the format YYYYMMDD)
     date_str = os.path.basename(index_file).split('_')[0]
 
-    # Define paths for model and output files
-    model_save_path = os.path.join(model_save_dir, f'{date_str}_rf_model_index.pkl')
-    predicted_snow_map_index_tmp = f'/tmp/{date_str}_predicted_snow_map_index_non_shaded.tif'
-    output_masked_snow_map_path = os.path.join(output_dir, f'{date_str}_RF_predicted_snow_map_non_shaded.tif')
+    # Define paths for model and output files, including today's date
+    model_save_path = os.path.join(model_save_dir, f'{today_str}_{date_str}_rf_model_index.pkl')
+    predicted_snow_map_index_tmp = f'/tmp/{today_str}_{date_str}_predicted_snow_map_index_non_shaded.tif'
+    output_masked_snow_map_path = os.path.join(output_dir, f'{today_str}_{date_str}_RF_predicted_snow_map_non_shaded.tif')
 
     print(f"Processing file {i+1}/{len(index_files)}: {index_file}")
 
     # Load the index file (this will define the output size and position)
     index_raster, geotransform, projection, index_nodata_value = load_raster(index_file)
 
-    # Resample the training data to match the index file
-    resampled_training_raster_path = f'/tmp/resampled_training_raster_{date_str}.tif'
-    resample_raster_to_match(index_file, training_data_tif, resampled_training_raster_path)
+    # Load and resample all training data to match the index file
+    resampled_training_rasters = []
+    for training_file in training_files:
+        resampled_training_raster_path = f'/tmp/{today_str}_resampled_training_raster_{os.path.basename(training_file)}'
+        resample_raster_to_match(index_file, training_file, resampled_training_raster_path)
+        training_raster, _, _, _ = load_raster(resampled_training_raster_path)
+        resampled_training_rasters.append(training_raster)
 
-    # Load the resampled training data
-    training_raster, _, _, training_nodata_value = load_raster(resampled_training_raster_path)
-
-    # Create training data
-    training_data = create_training_data_from_raster(training_raster, index_raster, nodata_value=training_nodata_value)
+    # Create training data from all the resampled training rasters
+    training_data = create_training_data_from_multiple_rasters(resampled_training_rasters, index_raster, nodata_value=index_nodata_value)
 
     # Train the model
     train_model(training_data, model_save_path)

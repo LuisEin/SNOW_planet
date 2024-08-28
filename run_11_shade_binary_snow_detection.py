@@ -125,8 +125,8 @@ def process_directory(input_directory, output_directory, height_threshold):
                 print(f"Error processing file {file_path}: {e}")
 
 # Paths to your directories
-input_directory = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Shadow_mask/shadow_masked_original_ready_files_gaussian_filtered'
-output_directory = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/snow_classified_gaussian_filtered/shaded'
+input_directory = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/Shadow_mask/shadow_masked_original_ready_files_gaussian_filtered_offset_0.02'
+output_directory = '/home/luis/Data/04_Uni/03_Master_Thesis/SNOW/02_data/PlanetScope_Data/snow_classified_gaussian_filtered/shaded_offset_0.02'
 
 os.makedirs(output_directory, exist_ok=True)
 
